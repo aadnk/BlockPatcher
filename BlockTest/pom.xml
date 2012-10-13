@@ -41,6 +41,12 @@
     </plugins>
   </build>
   
+  <scm>
+    <connection>scm:git:git://github.com/aadnk/BlockPatcher.git</connection>
+    <developerConnection>scm:git:git@github.com:aadnk/BlockPatcher.git</developerConnection>
+    <url>https://github.com/aadnk/BlockPatcher</url>
+  </scm>
+  
   <licenses>
     <license>
       <name>GNU GENERAL PUBLIC LICENSE - Version 2, June 1991</name>
