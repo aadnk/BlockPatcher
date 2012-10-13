@@ -1,0 +1,9 @@
+name: BlockPatcher
+version: 1.2.1
+description: Allow unmodified clients to connect to a server with custom blocks.
+author: Comphenix
+website: http://www.comphenix.net/BlockPatcher
+
+main: com.comphenix.blockpatcher.PatcherMod
+depend: [ProtocolLib]
+database: false

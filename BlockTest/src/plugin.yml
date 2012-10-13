@@ -1,0 +1,9 @@
+name: BlockTest
+version: 1.2.0
+description: A simple test of the BlockPatcher.
+author: Comphenix
+website: http://www.comphenix.net/BlockTestMod
+
+main: com.comphenix.blocktest.BlockTestMod
+depend: [BlockPatcher]
+database: false
