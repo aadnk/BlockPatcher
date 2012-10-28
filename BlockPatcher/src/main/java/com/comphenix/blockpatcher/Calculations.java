@@ -192,19 +192,33 @@ class Calculations {
     public void translateDroppedItem(PacketContainer packet, Player player, EventScheduler scheduler) throws FieldAccessException {
     	
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
+    	
+    	// Minecraft 1.3.2 or lower
+    	if (ints.size() > 4) {
 
-    	int itemsID = ints.read(4);
-    	int count = ints.read(5);
-    	int data = ints.read(6);
-    	
-    	ItemStack stack = new ItemStack(itemsID, count, (short) data);
-    	scheduler.computeItemConversion(new ItemStack[] { stack }, player, false);
-    	
-    	// Make sure it has changed
-    	if (stack.getTypeId() != itemsID || stack.getAmount() != count || stack.getDurability() != data) {
-    		ints.write(4, stack.getTypeId());
-    		ints.write(5, stack.getAmount());
-    		ints.write(6, (int) stack.getDurability());
+        	int itemsID = ints.read(4);
+        	int count = ints.read(5);
+        	int data = ints.read(6);
+        	
+        	ItemStack stack = new ItemStack(itemsID, count, (short) data);
+        	scheduler.computeItemConversion(new ItemStack[] { stack }, player, false);
+        	
+        	// Make sure it has changed
+        	if (stack.getTypeId() != itemsID || stack.getAmount() != count || stack.getDurability() != data) {
+        		ints.write(4, stack.getTypeId());
+        		ints.write(5, stack.getAmount());
+        		ints.write(6, (int) stack.getDurability());
+        	}
+        	
+    	// Minecraft 1.4.2
+    	} else {
+    		StructureModifier<ItemStack> stacks = packet.getItemModifier();
+    		
+    		// Very simple
+    		if (stacks.size() > 0)
+    			scheduler.computeItemConversion(new ItemStack[] { stacks.read(0) }, player, false);
+    		else
+    			throw new IllegalStateException("Unrecognized packet structure.");
     	}
     }
 
