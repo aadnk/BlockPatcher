@@ -5,6 +5,11 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.ItemStack;
 
+/**
+ * Invoked before an item is sent to a client.
+ * 
+ * @author Kristian
+ */
 public class ItemConvertingEvent extends Event {
 	
     private static final HandlerList handlers = new HandlerList();

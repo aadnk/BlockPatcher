@@ -21,9 +21,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class PatcherMod extends JavaPlugin {
 
+	private EventScheduler scheduler;
 	private Calculations calculations;
 	private PacketListeners listeners;
 	
+	private static ConversionCache cache;
 	private static PatcherAPI api;
 	
 	/**
@@ -33,16 +35,26 @@ public class PatcherMod extends JavaPlugin {
 	public static PatcherAPI getAPI() {
 		return api;
 	}
+
+	/**
+	 * Retrieve the current cache of lookup tables by chunks and players.
+	 * @return Every cached lookup table.
+	 */
+	public static ConversionCache getCache() {
+		return cache;
+	}
 	
 	@Override
 	public void onLoad() {
 		api = new PatcherAPI();
+		cache = new ConversionCache(api);
 	}
 	
 	@Override
 	public void onEnable() {
-		calculations = new Calculations(api.getBlockLookup(), api.getDataLookup());
-		listeners = new PacketListeners(this, new EventScheduler(getServer().getPluginManager()));
+		scheduler = new EventScheduler(getServer().getPluginManager());
+		calculations = new Calculations(cache, scheduler);
+		listeners = new PacketListeners(this, scheduler);
 		listeners.registerEvents(calculations);
 	}
 }

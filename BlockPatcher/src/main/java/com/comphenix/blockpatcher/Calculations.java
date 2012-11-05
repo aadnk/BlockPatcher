@@ -25,6 +25,8 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import com.comphenix.blockpatcher.lookup.ConversionLookup;
+import com.comphenix.blockpatcher.lookup.SegmentLookup;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.FieldAccessException;
 import com.comphenix.protocol.reflect.StructureModifier;
@@ -51,12 +53,13 @@ class Calculations {
 	    public int blockSize;
 	}
 	
-	private byte[] blockLookup;
-	private byte[] dataLookup;
-
-	public Calculations(byte[] blockLookup, byte[] dataLookup) {
-		this.blockLookup = blockLookup;
-		this.dataLookup = dataLookup;
+	// Used to get a chunk's specific lookup table
+	private EventScheduler scheduler;
+	private ConversionCache cache;
+	
+	public Calculations(ConversionCache cache, EventScheduler scheduler) {
+		this.cache = cache;
+		this.scheduler = scheduler;
 	}
 	
 	public boolean isImportantChunkBulk(PacketContainer packet, Player player) throws FieldAccessException {
@@ -137,20 +140,32 @@ class Calculations {
     }
     
     public void translateBlockChange(PacketContainer packet, Player player) throws FieldAccessException {
-    	
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
+    	
+    	int x = ints.read(0);
+    	int z = ints.read(2);
     	int blockID = ints.read(3);
     	int data = ints.read(4);
     	
+    	// Get the correct table
+    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, z >> 4);
+    	
     	// Convert using the tables
-    	ints.write(3, (int) (blockLookup[blockID] & 0xFF));	
-    	ints.write(4, (int) (dataLookup[(blockID << 4) + data] & 0xF));
+    	ints.write(3, lookup.getBlockLookup(blockID));	
+    	ints.write(4, lookup.getDataLookup(blockID, data));
     }
     
     public void translateMultiBlockChange(PacketContainer packet, Player player) throws FieldAccessException {
     	
     	StructureModifier<byte[]> byteArrays = packet.getSpecificModifier(byte[].class);
+    	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
+    	
+    	int chunkX = ints.read(0);
+    	int chunkZ = ints.read(1);
     	byte[] data = byteArrays.read(0);
+    	
+    	// Get the correct table
+    	ConversionLookup lookup = cache.loadCacheOrDefault(player, chunkX, chunkZ);
     	
     	// Each updated block is stored sequentially in 4 byte sized blocks.
     	// The content of these bytes are as follows:
@@ -166,8 +181,8 @@ class Calculations {
     		
     		if (block >= 0) {
 	    		// Translate and write back the result
-    			info = dataLookup[(block << 4) + info] & 0xF;
-	    		block = blockLookup[block & 0xFF] & 0xFF;
+    			info =  lookup.getDataLookup(block, info);
+	    		block = lookup.getBlockLookup(block);
 	    		
 	    		data[i + 2] = (byte) ((block >> 4) & 0xFF);
 	    		data[i + 3] = (byte) (((block & 0xF) << 4) | info);
@@ -179,12 +194,17 @@ class Calculations {
     	
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
     	
+    	int x = ints.read(1);
+    	int z = ints.read(3);
     	int type = ints.read(7);
     	int data = ints.read(8);
     	
-    	// Falling object (doesn't have a data field)
+    	// Get the correct table
+    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, z >> 4);
+    	
+    	// Falling object (only block ID)
     	if (type == 70) {
-    		data = blockLookup[data] & 0xFF;
+    		data = lookup.getBlockLookup(data);
     		ints.write(8, data);
     	}
     }
@@ -247,23 +267,37 @@ class Calculations {
 
         // Make sure the chunk is loaded 
         if (isChunkLoaded(info.player.getWorld(), info.chunkX, info.chunkZ)) {
-            translate(info);
+        	// Invoke the event
+        	SegmentLookup baseLookup = cache.getDefaultLookupTable();
+        	SegmentLookup lookup = scheduler.getChunkConversion(baseLookup, info.player, info.chunkX, info.chunkZ);
+        	
+        	// Save the result to the cache, if it's not the default
+        	if (!baseLookup.equals(lookup)) {
+        		cache.saveCache(info.player, info.chunkX, info.chunkZ, lookup);
+        	}
+        	
+            translate(lookup, info);
         }
     }
     
-    private void translate(ChunkInfo info) {
+    private void translate(SegmentLookup lookup, ChunkInfo info) {
         // Loop over 16x16x16 chunks in the 16x256x16 column
         int idIndexModifier = 0;
         
         int idOffset = info.startIndex;
         int dataOffset = idOffset + info.chunkSectionNumber * 4096;
-        
+                
 		// Stopwatch watch = new Stopwatch();
 		// watch.start();
         
         for (int i = 0; i < 16; i++) {
             // If the bitmask indicates this chunk is sent
             if ((info.chunkMask & 1 << i) > 0) {
+            	
+                // Use the raw lookup arrays for speed
+                byte[] blockLookup = lookup.getSegmentView(i).getBlockLookup();
+                byte[] dataLookup = lookup.getSegmentView(i).getDataLookup();
+            	
                 int relativeIDStart = idIndexModifier * 4096;
                 int relativeDataStart = idIndexModifier * 2048;
                 
