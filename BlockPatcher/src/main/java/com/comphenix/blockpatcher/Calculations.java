@@ -294,9 +294,7 @@ class Calculations {
             // If the bitmask indicates this chunk is sent
             if ((info.chunkMask & 1 << i) > 0) {
             	
-                // Use the raw lookup arrays for speed
-                byte[] blockLookup = lookup.getSegmentView(i).getBlockLookup();
-                byte[] dataLookup = lookup.getSegmentView(i).getDataLookup();
+            	ConversionLookup view = lookup.getSegmentView(i);
             	
                 int relativeIDStart = idIndexModifier * 4096;
                 int relativeDataStart = idIndexModifier * 2048;
@@ -315,19 +313,19 @@ class Calculations {
                         	int blockID = info.data[blockIndex] & 0xFF;
                         	
                             // Transform block
-                            info.data[blockIndex] = blockLookup[blockID];
+                            info.data[blockIndex] = (byte) view.getBlockLookup(blockID);
                         	
 							if ((blockIndex & 0x1) == 0) {
 								int blockData = info.data[dataIndex] & 0xF;
 								
 								// Update the higher nibble
-								output |= dataLookup[(blockID << 4) + blockData];
+								output |= view.getDataLookup(blockID, blockData);
 								
 							} else {
 								int blockData = (info.data[dataIndex] >> 4) & 0xF;
 								
 								// Update the lower nibble
-								output |= dataLookup[(blockID << 4) + blockData] << 4;
+								output |= view.getDataLookup(blockID, blockData);
 								
 								// Write the result
 								info.data[dataIndex] = (byte) (output & 0xFF);
