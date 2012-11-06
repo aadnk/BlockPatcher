@@ -291,9 +291,9 @@ class Calculations {
         
         int idOffset = info.startIndex;
         int dataOffset = idOffset + info.chunkSectionNumber * 4096;
-                
-		Stopwatch watch = new Stopwatch();
-		watch.start();
+              
+		//Stopwatch watch = new Stopwatch();
+		//watch.start();
         
         for (int i = 0; i < 16; i++) {
             // If the bitmask indicates this chunk is sent
@@ -347,11 +347,11 @@ class Calculations {
             }
         }
         
-        watch.stop();
-        System.out.println(String.format("Processed x: %s, z: %s in %s ms.", 
-        			       info.chunkX, info.chunkZ, 
-        			       getMilliseconds(watch))
-        );
+        //watch.stop();
+        //System.out.println(String.format("Processed x: %s, z: %s in %s ms.", 
+        //			       info.chunkX, info.chunkZ, 
+        //			       getMilliseconds(watch))
+        //);
         
         // We're done
     }

@@ -104,7 +104,7 @@ public class BlockTestMod extends JavaPlugin implements Listener {
 			lookup.setBlockLookup(Material.LAPIS_BLOCK.getId(), glass);
 			lookup.setBlockLookup(Material.IRON_BLOCK.getId(), glass);
 			
-			System.out.println("GLASS at " + event.getChunkX() + " " + event.getChunkZ());
+			//System.out.println("GLASS at " + event.getChunkX() + " " + event.getChunkZ());
 		}
 	}
 	
