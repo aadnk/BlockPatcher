@@ -1,6 +1,10 @@
 package com.comphenix.blockpatcher;
 
+import java.lang.ref.WeakReference;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.bukkit.entity.Player;
 
@@ -13,13 +17,19 @@ public class ConversionCache {
 	/**
 	 * The radius of cached chunk conversions around a player.
 	 * <p>
-	 * This will only break in case someone uses more than "extreme" render distance in
+	 * This will only break in case someone uses more than "far" render distance in
 	 * multiplayer, which is currently not possible.
 	 */
-	private int BUFFER_RADIUS = 32;
+	private int BUFFER_RADIUS = 16;
 	
 	// Cached conversions by player and chunk. Note that we don't actually store the real chunk location.
 	private ConcurrentMap<Player, SphericalBuffer<SegmentLookup>> playerConversions;
+	
+	// Prevent duplicate conversion lookups from being added
+	private Map<SegmentLookup, WeakReference<SegmentLookup>> conversionCache;
+	
+	// Reading and writing to the conversion cache
+	private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 	
 	// Default conversion lookup table
 	private SegmentLookup defaultLookupTable;
@@ -34,6 +44,9 @@ public class ConversionCache {
 				concurrencyLevel(2).
 				weakKeys().
 				makeMap();
+		
+		// Duplicate cache
+		this.conversionCache = new WeakHashMap<SegmentLookup, WeakReference<SegmentLookup>>();
 	}
 	
 	/**
@@ -58,6 +71,8 @@ public class ConversionCache {
 		SphericalBuffer<SegmentLookup> cache = playerConversions.get(player);
 		SphericalBuffer<SegmentLookup> inserted = null;
 		
+		lookupTable = getCachedConversion(lookupTable);
+
 		// Cheap and thread safe
 		if (cache == null) {
 			cache = new SphericalBuffer<SegmentLookup>(BUFFER_RADIUS * 2, BUFFER_RADIUS * 2);
@@ -69,6 +84,33 @@ public class ConversionCache {
 		
 		// Next, store the chunk conversion
 		cache.set(chunkX, chunkZ, lookupTable);
+	}
+	
+	private SegmentLookup getCachedConversion(SegmentLookup lookup) {
+		WeakReference<SegmentLookup> previous = null;
+		
+		// Prevent duplicates
+		try {
+			lock.readLock().lock();
+			previous = conversionCache.get(lookup);
+		} finally {
+			lock.readLock().unlock();
+		}
+		
+		// Use the previous value, instead of adding a new
+		if (previous != null && previous.get() != null) {
+			return previous.get();
+		} else {
+			try {
+				lock.writeLock().lock();
+				conversionCache.put(lookup, new WeakReference<SegmentLookup>(lookup));
+			} finally {
+				lock.writeLock().unlock();
+			}
+			
+			// Return the same conversion table
+			return lookup;
+		}
 	}
 	
 	/**

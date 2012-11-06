@@ -118,6 +118,26 @@ public class ChunkSegmentLookup implements SegmentLookup, Serializable {
 	}
 	
 	@Override
+	public void setBlockLookup(int blockID, int newBlockID, int chunkY) {
+		getSegmentView(chunkY).setBlockLookup(blockID, newBlockID);
+	}
+
+	@Override
+	public int getBlockLookup(int blockID, int chunkY) {
+		return getSegmentView(chunkY).getBlockLookup(blockID);
+	}
+
+	@Override
+	public void setDataLookup(int blockID, int originalDataValue, int newDataValue, int chunkY) {
+		getSegmentView(chunkY).setDataLookup(blockID, originalDataValue, newDataValue);
+	}
+
+	@Override
+	public int getDataLookup(int blockID, int dataValue, int chunkY) {
+		return getSegmentView(chunkY).getDataLookup(blockID, dataValue);
+	}
+	
+	@Override
 	public byte[] getDataLookup() {
 		return getCommonLookup().getDataLookup();
 	}
@@ -173,7 +193,7 @@ public class ChunkSegmentLookup implements SegmentLookup, Serializable {
 	    if (other instanceof ChunkSegmentLookup) {
 	    	final ChunkSegmentLookup segmentLookup = (ChunkSegmentLookup) other;
 	    	return Arrays.deepEquals(segments, segmentLookup.segments) &&
-	    		   Objects.equal(baseLookup, baseLookup);
+	    		   Objects.equal(baseLookup, segmentLookup.baseLookup);
 	    }
 		return false;
 	}

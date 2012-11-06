@@ -24,6 +24,10 @@ class EventScheduler {
 	
 	/**
 	 * Retrieve the lookup table given this player and the provided list of block coordinates.
+	 * @param baseLookup - the default lookup table.
+	 * @param player - the current player.
+	 * @param chunkX - current chunk x position.
+	 * @param chunkZ - current chunk y position.
 	 * @return A conversion lookup table.
 	 */
 	public SegmentLookup getChunkConversion(SegmentLookup baseLookup, Player player, int chunkX, int chunkZ) {

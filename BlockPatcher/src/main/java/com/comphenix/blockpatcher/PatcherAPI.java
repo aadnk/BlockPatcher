@@ -16,6 +16,8 @@
  */
 package com.comphenix.blockpatcher;
 
+import org.bukkit.entity.Player;
+
 import com.comphenix.blockpatcher.lookup.ChunkLookup;
 import com.comphenix.blockpatcher.lookup.ChunkSegmentLookup;
 
@@ -38,7 +40,17 @@ public final class PatcherAPI extends ChunkSegmentLookup {
 		// Use the identity lookup table
 		super(new ChunkLookup());
 	}
-
+	
+	/**
+	 * Re-transmit the given chunk to the given player.
+	 * @param player - the given player.
+	 * @param chunkX - the chunk x coordinate.
+	 * @param chunkZ - the chunk z coordinate.
+	 */
+	public void resendChunk(Player player, int chunkX, int chunkZ) {
+		ChunkUtility.resendChunk(player, chunkX, chunkZ);
+	}
+	
 	/**
 	 * Generate a translation table that doesn't change any value.
 	 * @param max - the maximum number of entries in the table.

@@ -95,8 +95,10 @@ public class LazyCopyLookup implements ConversionLookup {
 	    if (other instanceof LazyCopyLookup) {
 	    	final LazyCopyLookup lazyCopy = (LazyCopyLookup) other;
 	    	return Objects.equal(delegate, lazyCopy.delegate);
+	    } else {
+	    	// Compare against the delegate instead
+	    	return Objects.equal(delegate, other);
 	    }
-		return super.equals(other);
 	}
 
 	@Override

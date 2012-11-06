@@ -1,7 +1,9 @@
 package com.comphenix.blockpatcher.lookup;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 /**
@@ -25,7 +27,7 @@ public class ChunkLookup implements ConversionLookup, Serializable {
 	 * The data value translation table we'll use.
 	 */
 	protected byte[] dataLookup;
-	
+
 	/**
 	 * Generate a new chunk lookup table using default identity arrays.
 	 * <p>
@@ -95,6 +97,29 @@ public class ChunkLookup implements ConversionLookup, Serializable {
 	@Override
 	public ConversionLookup deepClone() {
 		return new ChunkLookup(this);
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+	    if(other == this) return true;
+	    if(other == null) return false;
+	 
+	    // Ensure that LazyCopyLookup is commutative
+	    if (other instanceof LazyCopyLookup) {
+	    	return other.equals(this);
+	    } else if (other instanceof ChunkLookup) {
+	    	ChunkLookup lookup = (ChunkLookup) other;
+	    	return Arrays.equals(blockLookup, lookup.blockLookup) &&
+	    		   Arrays.equals(dataLookup, lookup.dataLookup);
+	    } else {
+	    	return super.equals(other);
+	    }
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hashCode(Arrays.hashCode(blockLookup), 
+								Arrays.hashCode(dataLookup));
 	}
 	
 	/**

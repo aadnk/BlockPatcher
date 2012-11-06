@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.comphenix.blockpatcher</groupId>
   <artifactId>BlockPatcher</artifactId>
-  <version>1.2.2</version>
+  <version>1.3.0-SNAPSHOT</version>
   <name>BlockPatcher</name>
   <description>Allow unmodified clients to connect to a server with custom blocks.</description>
   
@@ -118,8 +118,8 @@
   <dependencies>
   	<dependency>
   		<groupId>org.bukkit</groupId>
-  		<artifactId>bukkit</artifactId>
-  		<version>1.3.2-R1.0</version>
+  		<artifactId>craftbukkit</artifactId>
+  		<version>1.4.2-R0.2</version>
   		<scope>provided</scope>
   	</dependency>
   	<dependency>
