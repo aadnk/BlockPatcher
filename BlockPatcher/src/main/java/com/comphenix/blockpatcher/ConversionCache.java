@@ -8,6 +8,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.bukkit.entity.Player;
 
+import com.comphenix.blockpatcher.lookup.ConversionLookup;
 import com.comphenix.blockpatcher.lookup.SegmentLookup;
 import com.comphenix.blockpatcher.lookup.SphericalBuffer;
 import com.google.common.collect.MapMaker;
@@ -71,8 +72,10 @@ public class ConversionCache {
 		SphericalBuffer<SegmentLookup> cache = playerConversions.get(player);
 		SphericalBuffer<SegmentLookup> inserted = null;
 		
-		lookupTable = getCachedConversion(lookupTable);
-
+		if (lookupTable != null) {
+			lookupTable = getCachedConversion(lookupTable);
+		}
+		
 		// Cheap and thread safe
 		if (cache == null) {
 			cache = new SphericalBuffer<SegmentLookup>(BUFFER_RADIUS * 2, BUFFER_RADIUS * 2);
@@ -145,5 +148,17 @@ public class ConversionCache {
 		} else {
 			return defaultLookupTable;
 		}
+	}
+	
+	/**
+	 * Retrieve the conversion lookup table at a given chunk for a player, or the default table if not found.
+	 * @param player - the player.
+	 * @param chunkX - chunk x position.
+	 * @param chunkY - chunk y position.
+	 * @param chunkZ - chunk y position.
+	 * @return A lookup table, or the default lookup table if not found.
+	 */
+	public ConversionLookup loadCacheOrDefault(Player player, int chunkX, int chunkY, int chunkZ) {
+		return loadCacheOrDefault(player, chunkX, chunkZ).getSegmentView(chunkY);
 	}
 }

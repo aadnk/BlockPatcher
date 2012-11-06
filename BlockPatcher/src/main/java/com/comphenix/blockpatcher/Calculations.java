@@ -143,12 +143,13 @@ class Calculations {
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
     	
     	int x = ints.read(0);
+    	int y = ints.read(1);
     	int z = ints.read(2);
     	int blockID = ints.read(3);
     	int data = ints.read(4);
     	
     	// Get the correct table
-    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, z >> 4);
+    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, y >> 4, z >> 4);
     	
     	// Convert using the tables
     	ints.write(3, lookup.getBlockLookup(blockID));	
@@ -165,7 +166,7 @@ class Calculations {
     	byte[] data = byteArrays.read(0);
     	
     	// Get the correct table
-    	ConversionLookup lookup = cache.loadCacheOrDefault(player, chunkX, chunkZ);
+    	SegmentLookup lookup = cache.loadCacheOrDefault(player, chunkX, chunkZ);
     	
     	// Each updated block is stored sequentially in 4 byte sized blocks.
     	// The content of these bytes are as follows:
@@ -178,11 +179,12 @@ class Calculations {
     		int block = ((data[i + 2] << 4) & 0xFFF) | 
     				    ((data[i + 3] >> 4) & 0xF);
     		int info = data[i + 3] & 0xF;
+    		int chunkY = (data[i + 1] & 0xFF) >> 4;
     		
     		if (block >= 0) {
 	    		// Translate and write back the result
-    			info =  lookup.getDataLookup(block, info);
-	    		block = lookup.getBlockLookup(block);
+    			info =  lookup.getDataLookup(block, info, chunkY);
+	    		block = lookup.getBlockLookup(block, chunkY);
 	    		
 	    		data[i + 2] = (byte) ((block >> 4) & 0xFF);
 	    		data[i + 3] = (byte) (((block & 0xF) << 4) | info);
@@ -195,12 +197,13 @@ class Calculations {
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
     	
     	int x = ints.read(1);
+    	int y = ints.read(2);
     	int z = ints.read(3);
     	int type = ints.read(7);
     	int data = ints.read(8);
     	
     	// Get the correct table
-    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, z >> 4);
+    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, y >> 4, z >> 4);
     	
     	// Falling object (only block ID)
     	if (type == 70) {
@@ -274,6 +277,8 @@ class Calculations {
         	// Save the result to the cache, if it's not the default
         	if (!baseLookup.equals(lookup)) {
         		cache.saveCache(info.player, info.chunkX, info.chunkZ, lookup);
+        	} else {
+        		cache.saveCache(info.player, info.chunkX, info.chunkZ, null);
         	}
         	
             translate(lookup, info);
