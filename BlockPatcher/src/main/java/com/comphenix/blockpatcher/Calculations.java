@@ -264,8 +264,6 @@ class Calculations {
 	        // Allow mods to convert it and write back the result
 	        scheduler.computeItemConversion(new ItemStack[] { watcher.getItemStack(10) }, player, false);
 	        packet.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
-	        
-	        System.out.println("Original: " + original.getItemStack(10) + "  New: " + watcher.getItemStack(10));
 		}
 	}
 
