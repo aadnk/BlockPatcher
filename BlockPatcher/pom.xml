@@ -126,6 +126,7 @@
   		<groupId>com.comphenix.protocol</groupId>
   		<artifactId>ProtocolLib</artifactId>
   		<version>1.5.1-SNAPSHOT</version>
+  		<scope>provided</scope>
   	</dependency>
   </dependencies>
 </project>

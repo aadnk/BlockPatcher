@@ -195,18 +195,19 @@ class Calculations {
     public void translateFallingObject(PacketContainer packet, Player player) throws FieldAccessException {
     	
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
-    	
-    	int x = ints.read(1);
-    	int y = ints.read(2);
-    	int z = ints.read(3);
+
     	int type = ints.read(7);
     	int data = ints.read(8);
-    	
-    	// Get the correct table
-    	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, y >> 4, z >> 4);
-    	
+    
     	// Falling object (only block ID)
     	if (type == 70) {
+        	int x = ints.read(1);
+        	int y = ints.read(2);
+        	int z = ints.read(3);
+    		
+        	// Get the correct table
+        	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, y >> 4, z >> 4);
+    		
     		data = lookup.getBlockLookup(data);
     		ints.write(8, data);
     	}

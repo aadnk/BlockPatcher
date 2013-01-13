@@ -17,7 +17,7 @@ import com.comphenix.blockpatcher.PatcherAPI;
 import com.comphenix.blockpatcher.PatcherMod;
 import com.comphenix.blockpatcher.events.ChunkPostProcessingEvent;
 import com.comphenix.blockpatcher.events.ItemConvertingEvent;
-import com.comphenix.blockpatcher.lookup.ConversionLookup;
+import com.comphenix.blockpatcher.lookup.SegmentLookup;
 
 public class BlockTestMod extends JavaPlugin implements Listener {
 
@@ -77,7 +77,7 @@ public class BlockTestMod extends JavaPlugin implements Listener {
 		
 		// Convert to glass
 		if (last != null && (last.getBlockX() == event.getChunkX() && last.getBlockZ() == event.getChunkZ())) {
-			ConversionLookup lookup = event.getLookup();
+			SegmentLookup lookup = event.getLookup();
 			
 			int glass = Material.GLASS.getId();
 			
