@@ -22,6 +22,8 @@ package com.comphenix.blockpatcher;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -30,6 +32,7 @@ import com.comphenix.blockpatcher.lookup.SegmentLookup;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.FieldAccessException;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.base.Stopwatch;
 
 /**
@@ -245,6 +248,26 @@ class Calculations {
     			throw new IllegalStateException("Unrecognized packet structure.");
     	}
     }
+    
+	public void translateDroppedItemMetadata(PacketContainer packet, Player player, EventScheduler scheduler) {
+		Entity entity = packet.getEntityModifier(player.getWorld()).read(0);
+		
+		if (entity instanceof Item) {
+			// Great. Get the item from the DataWatcher
+	        WrappedDataWatcher original = new WrappedDataWatcher(
+	                packet.getWatchableCollectionModifier().read(0)
+	        );
+	        
+	        // Clone it
+	        WrappedDataWatcher watcher = original.deepClone();
+	        
+	        // Allow mods to convert it and write back the result
+	        scheduler.computeItemConversion(new ItemStack[] { watcher.getItemStack(10) }, player, false);
+	        packet.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
+	        
+	        System.out.println("Original: " + original.getItemStack(10) + "  New: " + watcher.getItemStack(10));
+		}
+	}
 
     private boolean isChunkLoaded(World world, int x, int z) {
         return world.isChunkLoaded(x, z);

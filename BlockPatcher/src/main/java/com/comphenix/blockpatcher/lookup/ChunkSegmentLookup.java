@@ -63,7 +63,7 @@ public class ChunkSegmentLookup implements SegmentLookup, Serializable {
 	@Override
 	public ConversionLookup getSegmentView(int chunkY) {
 		if (chunkY < 0 || chunkY >= segmentCount)
-			throw new IllegalArgumentException("y must be in the range 0 - " + (segmentCount - 1));
+			throw new IllegalArgumentException("y (" + chunkY + ") must be in the range 0 - " + (segmentCount - 1));
 	
 		ConversionLookup lookup = segments[chunkY];
 		final int index = chunkY;

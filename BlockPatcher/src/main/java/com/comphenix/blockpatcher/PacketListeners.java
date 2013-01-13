@@ -28,7 +28,6 @@ class PacketListeners {
 	}
 
 	public void registerEvents(final Calculations calculations) {
-		
 		ProtocolManager manager = ProtocolLibrary.getProtocolManager();		
 		
 		// Modify chunk packets asynchronously
@@ -52,6 +51,17 @@ class PacketListeners {
 					}
 				}
 			}).start(2);
+	
+		// Handling depreciated events
+		if (!registerPickupSpawn(manager, calculations)) {
+			manager.addPacketListener(
+				new PacketAdapter(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.HIGHEST, Packets.Server.ENTITY_METADATA) {
+					@Override
+					public void onPacketSending(PacketEvent event) {
+						calculations.translateDroppedItemMetadata(event.getPacket(), event.getPlayer(), scheduler);
+					}
+				});
+		}
 		
 		// These are small enough to be run on the main thread
 		manager.addPacketListener(
@@ -61,7 +71,6 @@ class PacketListeners {
 					Packets.Server.BLOCK_CHANGE, 
 					Packets.Server.MULTI_BLOCK_CHANGE, 
 					Packets.Server.VEHICLE_SPAWN,
-					Packets.Server.PICKUP_SPAWN,
 					Packets.Server.SET_SLOT,
 					Packets.Server.WINDOW_ITEMS) {
 				public void onPacketSending(PacketEvent event) {
@@ -88,9 +97,6 @@ class PacketListeners {
 						case Packets.Server.VEHICLE_SPAWN:
 							calculations.translateFallingObject(packet, player);
 							break;
-						case Packets.Server.PICKUP_SPAWN:
-							calculations.translateDroppedItem(packet, player, scheduler);
-							break;
 						case Packets.Server.SET_SLOT:
 							stacks = new ItemStack[] { packet.getItemModifier().read(0) };
 					    	scheduler.computeItemConversion(stacks, player, true);
@@ -106,5 +112,24 @@ class PacketListeners {
 					}
 				};
 			});
+	}
+	
+	@SuppressWarnings("deprecation")
+	private boolean registerPickupSpawn(final ProtocolManager manager, final Calculations calculations) {
+		// Handle the pickup spawn packet in 1.4.5 and lower
+		if (Packets.Server.isSupported(Packets.Server.PICKUP_SPAWN)) {
+			manager.addPacketListener(
+				new PacketAdapter(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.HIGHEST, Packets.Server.PICKUP_SPAWN) {
+					@Override
+					public void onPacketSending(PacketEvent event) {
+						calculations.translateDroppedItem(event.getPacket(), event.getPlayer(), scheduler);
+					}
+				});
+			
+			return true;
+		}
+		
+		// We need to register something else
+		return false;
 	}
 }
