@@ -22,6 +22,7 @@ package com.comphenix.blockpatcher;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -49,12 +50,19 @@ class Calculations {
 	    public int extraMask;
 	    public int chunkSectionNumber;
 	    public int extraSectionNumber;
+	    public boolean hasContinous;
 	    public byte[] data;
 	    public Player player;
 	    public int startIndex;
 	    public int size;
 	    public int blockSize;
 	}
+	
+	// Useful Minecraft constants
+	private static final int BYTES_PER_NIBBLE_PART = 2048;
+	private static final int CHUNK_SEGMENTS = 16;
+	private static final int NIBBLES_REQUIRED = 4;
+	private static final int BIOME_ARRAY_LENGTH = 256;
 	
 	// Used to get a chunk's specific lookup table
 	private EventScheduler scheduler;
@@ -116,6 +124,7 @@ class Calculations {
             info.chunkZ = z[chunkNum];
             info.chunkMask = chunkMask[chunkNum];
             info.extraMask = extraMask[chunkNum];
+            info.hasContinous = true; // Always true
             info.data = byteArrays.read(1); //packet.buildBuffer;
             info.startIndex = dataStartIndex;
 
@@ -123,6 +132,11 @@ class Calculations {
             
             dataStartIndex += info.size;
         }
+    }
+	
+    // Mimic the ?? operator in C#
+    private <T> T getOrDefault(T value, T defaultIfNull) {
+    	return value != null ? value : defaultIfNull;
     }
     
     public void translateMapChunk(PacketContainer packet, Player player) throws FieldAccessException  {
@@ -137,6 +151,7 @@ class Calculations {
         info.chunkMask = ints.read(2); 	// packet.c;
         info.extraMask = ints.read(3);  // packet.d;
         info.data = byteArray.read(1);  // packet.inflatedBuffer;
+        info.hasContinous = getOrDefault(packet.getBooleans().readSafely(0), true);
         info.startIndex = 0;
         
         translateChunkInfoAndObfuscate(info, info.data);
@@ -272,9 +287,8 @@ class Calculations {
     }
     
     private void translateChunkInfoAndObfuscate(ChunkInfo info, byte[] returnData) {
-    	
         // Compute chunk number
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < CHUNK_SEGMENTS; i++) {
             if ((info.chunkMask & (1 << i)) > 0) {
                 info.chunkSectionNumber++;
             }
@@ -283,7 +297,29 @@ class Calculations {
             }
         }
         
-        info.size = 2048 * (5 * info.chunkSectionNumber + info.extraSectionNumber) + 256;
+        // There's no sun/moon in the end or in the nether, so Minecraft doesn't sent any skylight information
+        // This optimization was added in 1.4.6. Note that ideally you should get this from the "f" (skylight) field.
+        int skylightCount = info.player.getWorld().getEnvironment() == Environment.NORMAL ? 1 : 0;
+        
+        // The total size of a chunk is the number of blocks sent (depends on the number of sections) multiplied by the 
+        // amount of bytes per block. This last figure can be calculated by adding together all the data parts:
+        //   For any block:
+        //    * Block ID          -   8 bits per block (byte)
+        //    * Block metadata    -   4 bits per block (nibble)
+        //    * Block light array -   4 bits per block
+        //   If 'worldProvider.skylight' is TRUE
+        //    * Sky light array   -   4 bits per block
+        //   If the segment has extra data:
+        //    * Add array         -   4 bits per block
+        //   Biome array - only if the entire chunk (has continous) is sent:
+        //    * Biome array       -   256 bytes
+        // 
+        // A section has 16 * 16 * 16 = 4096 blocks. 
+        info.size = BYTES_PER_NIBBLE_PART * (
+        					(NIBBLES_REQUIRED + skylightCount) * info.chunkSectionNumber + 
+        					info.extraSectionNumber) + 
+        			(info.hasContinous ? BIOME_ARRAY_LENGTH : 0);
+        
         info.blockSize = 4096 * info.chunkSectionNumber;
         
         if (info.startIndex + info.blockSize > info.data.length) {
