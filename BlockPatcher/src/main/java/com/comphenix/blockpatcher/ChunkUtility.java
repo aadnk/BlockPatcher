@@ -1,10 +1,12 @@
 package com.comphenix.blockpatcher;
 
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import java.util.List;
+
 import org.bukkit.entity.Player;
 
-import net.minecraft.server.ChunkCoordIntPair;
-import net.minecraft.server.EntityPlayer;
+import com.comphenix.protocol.injector.BukkitUnwrapper;
+import com.comphenix.protocol.reflect.FuzzyReflection;
+import com.comphenix.protocol.utility.MinecraftReflection;
 
 /**
  * Performs simple operations on chunks.
@@ -21,7 +23,20 @@ class ChunkUtility {
 	 * @param chunkZ - the chunk z coordinate.
 	 */
 	public static void resendChunk(Player player, int chunkX, int chunkZ) {
-		EntityPlayer entity = ((CraftPlayer) player).getHandle();
-		entity.chunkCoordIntPairQueue.add(new ChunkCoordIntPair(chunkX, chunkZ));
+		BukkitUnwrapper unwrapper = new BukkitUnwrapper();
+		Object entityPlayer = unwrapper.unwrapItem(player);
+		
+		Class<?> chunkCoord = MinecraftReflection.getMinecraftClass("ChunkCoordIntPair");
+		
+		try {
+			List<Object> list = (List<Object>) FuzzyReflection.fromObject(entityPlayer).
+								getFieldByName("chunkCoordIntPairQueue").get(entityPlayer);
+			
+			// Add a chunk coord int pair
+			list.add(chunkCoord.getConstructor(int.class, int.class).newInstance(chunkX, chunkZ));
+			
+		} catch (Exception e) {
+			throw new RuntimeException("Cannot read chunk coord pair queue.", e);
+		}
 	}
 }
