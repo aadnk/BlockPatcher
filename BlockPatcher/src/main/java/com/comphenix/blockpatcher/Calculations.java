@@ -126,10 +126,15 @@ class Calculations {
             info.extraMask = extraMask[chunkNum];
             info.hasContinous = true; // Always true
             info.data = byteArrays.read(1); //packet.buildBuffer;
-            info.startIndex = dataStartIndex;
-
-            translateChunkInfoAndObfuscate(info, info.data);
             
+            // Check for Spigot
+            if (info.data == null || info.data.length == 0) {
+            	info.data = packet.getSpecificModifier(byte[][].class).read(0)[chunkNum];
+            } else {
+            	info.startIndex = dataStartIndex;
+            }
+            
+            translateChunkInfoAndObfuscate(info, info.data);
             dataStartIndex += info.size;
         }
     }
@@ -154,7 +159,9 @@ class Calculations {
         info.hasContinous = getOrDefault(packet.getBooleans().readSafely(0), true);
         info.startIndex = 0;
         
-        translateChunkInfoAndObfuscate(info, info.data);
+        if (info.data != null) { 
+        	translateChunkInfoAndObfuscate(info, info.data);
+        }
     }
     
     public void translateBlockChange(PacketContainer packet, Player player) throws FieldAccessException {
