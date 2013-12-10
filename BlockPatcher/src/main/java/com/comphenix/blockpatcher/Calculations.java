@@ -192,10 +192,10 @@ class Calculations {
     	// Convert using the tables
     	int newBlockID = lookup.getBlockLookup(blockID);	
     	int newData = lookup.getDataLookup(blockID, data);
-    	
+
     	// Write the changes
     	if (MinecraftReflection.isUsingNetty()) {
-    		packet.getBlocks().write(0, Material.getMaterial(blockID));
+    		packet.getBlocks().write(0, Material.getMaterial(newBlockID));
     		ints.write(3, newData);
     	} else {
     		ints.write(3, newBlockID);
