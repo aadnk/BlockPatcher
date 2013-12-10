@@ -6,15 +6,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
-import com.comphenix.protocol.Packets;
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
-import com.comphenix.protocol.events.ConnectionSide;
 import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.FieldAccessException;
+
+// Import server packets
+import static com.comphenix.protocol.PacketType.Play.Server.*;
 
 class PacketListeners {
 
@@ -32,18 +34,14 @@ class PacketListeners {
 		
 		// Modify chunk packets asynchronously
 		manager.getAsynchronousManager().registerAsyncHandler(
-			new PacketAdapter(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.HIGHEST, 
-					Packets.Server.MAP_CHUNK, Packets.Server.MAP_CHUNK_BULK) {
+			new PacketAdapter(plugin, ListenerPriority.HIGHEST, MAP_CHUNK, MAP_CHUNK_BULK) {
 				@Override
 				public void onPacketSending(PacketEvent event) {
 					try {
-						switch (event.getPacketID()) {
-						case Packets.Server.MAP_CHUNK:
+						if (event.getPacketType() == MAP_CHUNK) {
 							calculations.translateMapChunk(event.getPacket(), event.getPlayer());
-							break;
-						case Packets.Server.MAP_CHUNK_BULK:
+						} else {
 							calculations.translateMapChunkBulk(event.getPacket(), event.getPlayer());
-							break;
 						}
 
 					} catch (FieldAccessException e) {
@@ -55,7 +53,7 @@ class PacketListeners {
 		// Handling depreciated events
 		if (!registerPickupSpawn(manager, calculations)) {
 			manager.addPacketListener(
-				new PacketAdapter(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.HIGHEST, Packets.Server.ENTITY_METADATA) {
+				new PacketAdapter(plugin, ListenerPriority.HIGHEST, ENTITY_METADATA) {
 					@Override
 					public void onPacketSending(PacketEvent event) {
 						calculations.translateDroppedItemMetadata(event.getPacket(), event.getPlayer(), scheduler);
@@ -65,46 +63,40 @@ class PacketListeners {
 		
 		// These are small enough to be run on the main thread
 		manager.addPacketListener(
-			new PacketAdapter(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.HIGHEST,
-					Packets.Server.MAP_CHUNK,
-					Packets.Server.MAP_CHUNK_BULK,
-					Packets.Server.BLOCK_CHANGE, 
-					Packets.Server.MULTI_BLOCK_CHANGE, 
-					Packets.Server.VEHICLE_SPAWN,
-					Packets.Server.SET_SLOT,
-					Packets.Server.WINDOW_ITEMS) {
+			new PacketAdapter(plugin, ListenerPriority.HIGHEST,
+					MAP_CHUNK,
+					MAP_CHUNK_BULK,
+					BLOCK_CHANGE, 
+					MULTI_BLOCK_CHANGE, 
+					SPAWN_ENTITY,
+					SET_SLOT,
+					WINDOW_ITEMS) {
 				public void onPacketSending(PacketEvent event) {
 					try {
 						PacketContainer packet = event.getPacket();
 						Player player = event.getPlayer();
 						ItemStack[] stacks;
 						
-						switch (event.getPacketID()) {
-						case Packets.Server.MAP_CHUNK:
+						PacketType type = event.getPacketType();
+						
+						if (type == MAP_CHUNK) {
 							if (calculations.isImportantChunk(packet, player)) 
 								event.getAsyncMarker().setNewSendingIndex(0);
-							break;
-						case Packets.Server.MAP_CHUNK_BULK:
+						} else if (type == MAP_CHUNK_BULK) {
 							if (calculations.isImportantChunkBulk(packet, player)) 
 								event.getAsyncMarker().setNewSendingIndex(0);
-							break;
-						case Packets.Server.BLOCK_CHANGE:	
+						} else if (type == BLOCK_CHANGE) {
 							calculations.translateBlockChange(packet, player);
-							break;
-						case Packets.Server.MULTI_BLOCK_CHANGE:
+						} else if (type == MULTI_BLOCK_CHANGE) {
 							calculations.translateMultiBlockChange(packet, player);
-							break;
-						case Packets.Server.VEHICLE_SPAWN:
+						} else if (type == SPAWN_ENTITY) {
 							calculations.translateFallingObject(packet, player);
-							break;
-						case Packets.Server.SET_SLOT:
+						} else if (type == SET_SLOT) {
 							stacks = new ItemStack[] { packet.getItemModifier().read(0) };
-					    	scheduler.computeItemConversion(stacks, player, true);
-							break;
-						case Packets.Server.WINDOW_ITEMS:
+							scheduler.computeItemConversion(stacks, player, true);
+						} else if (type == WINDOW_ITEMS) {
 							stacks = packet.getItemArrayModifier().read(0);
 							scheduler.computeItemConversion(stacks, player, true);
-							break;
 						}
 
 					} catch (FieldAccessException e) {
@@ -114,12 +106,11 @@ class PacketListeners {
 			});
 	}
 	
-	@SuppressWarnings("deprecation")
 	private boolean registerPickupSpawn(final ProtocolManager manager, final Calculations calculations) {
 		// Handle the pickup spawn packet in 1.4.5 and lower
-		if (Packets.Server.isSupported(Packets.Server.PICKUP_SPAWN)) {
+		if (PacketType.Legacy.Server.PICKUP_SPAWN.isSupported()) {
 			manager.addPacketListener(
-				new PacketAdapter(plugin, ConnectionSide.SERVER_SIDE, ListenerPriority.HIGHEST, Packets.Server.PICKUP_SPAWN) {
+				new PacketAdapter(plugin, ListenerPriority.HIGHEST, PacketType.Legacy.Server.PICKUP_SPAWN) {
 					@Override
 					public void onPacketSending(PacketEvent event) {
 						calculations.translateDroppedItem(event.getPacket(), event.getPlayer(), scheduler);

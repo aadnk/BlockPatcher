@@ -21,6 +21,7 @@ package com.comphenix.blockpatcher;
  */
 import java.util.concurrent.TimeUnit;
 
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.entity.Entity;
@@ -33,6 +34,11 @@ import com.comphenix.blockpatcher.lookup.SegmentLookup;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.FieldAccessException;
 import com.comphenix.protocol.reflect.StructureModifier;
+import com.comphenix.protocol.reflect.accessors.Accessors;
+import com.comphenix.protocol.reflect.accessors.FieldAccessor;
+import com.comphenix.protocol.utility.MinecraftReflection;
+import com.comphenix.protocol.wrappers.ChunkPosition;
+import com.comphenix.protocol.wrappers.WrappedChunkCoordinate;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.base.Stopwatch;
 
@@ -57,7 +63,7 @@ class Calculations {
 	    public int size;
 	    public int blockSize;
 	}
-	
+		
 	// Useful Minecraft constants
 	private static final int BYTES_PER_NIBBLE_PART = 2048;
 	private static final int CHUNK_SEGMENTS = 16;
@@ -163,35 +169,48 @@ class Calculations {
         	translateChunkInfoAndObfuscate(info, info.data);
         }
     }
-    
+        
     public void translateBlockChange(PacketContainer packet, Player player) throws FieldAccessException {
     	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
-    	
     	int x = ints.read(0);
     	int y = ints.read(1);
     	int z = ints.read(2);
-    	int blockID = ints.read(3);
-    	int data = ints.read(4);
+    	int blockID = 0;
+    	int data = 0; 
+    	
+    	if (MinecraftReflection.isUsingNetty()) {
+    		blockID = packet.getBlocks().read(0).getId();
+    		data = ints.read(3);
+    	} else {
+    		blockID = ints.read(3);
+    		data = ints.read(4);
+    	}
     	
     	// Get the correct table
     	ConversionLookup lookup = cache.loadCacheOrDefault(player, x >> 4, y >> 4, z >> 4);
     	
     	// Convert using the tables
-    	ints.write(3, lookup.getBlockLookup(blockID));	
-    	ints.write(4, lookup.getDataLookup(blockID, data));
+    	int newBlockID = lookup.getBlockLookup(blockID);	
+    	int newData = lookup.getDataLookup(blockID, data);
+    	
+    	// Write the changes
+    	if (MinecraftReflection.isUsingNetty()) {
+    		packet.getBlocks().write(0, Material.getMaterial(blockID));
+    		ints.write(3, newData);
+    	} else {
+    		ints.write(3, newBlockID);
+    		ints.write(4, newData);
+    	}
     }
-    
+        
     public void translateMultiBlockChange(PacketContainer packet, Player player) throws FieldAccessException {
-    	
     	StructureModifier<byte[]> byteArrays = packet.getSpecificModifier(byte[].class);
-    	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
+    	ChunkCoordInt coord = getChunkCoordinate(packet);
     	
-    	int chunkX = ints.read(0);
-    	int chunkZ = ints.read(1);
     	byte[] data = byteArrays.read(0);
     	
     	// Get the correct table
-    	SegmentLookup lookup = cache.loadCacheOrDefault(player, chunkX, chunkZ);
+    	SegmentLookup lookup = cache.loadCacheOrDefault(player, coord.x, coord.z);
     	
     	// Each updated block is stored sequentially in 4 byte sized blocks.
     	// The content of these bytes are as follows:
@@ -215,6 +234,17 @@ class Calculations {
 	    		data[i + 3] = (byte) (((block & 0xF) << 4) | info);
     		}
 		}
+    }
+    
+    private ChunkCoordInt getChunkCoordinate(PacketContainer packet) {
+    	StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
+    	
+    	if (ints.size() >= 2) {
+    		return new ChunkCoordInt(ints.read(0), ints.read(1));
+    	} else {
+    		// I forgot to add a wrapper - sorry
+    		return ChunkCoordInt.fromHandle(packet.getModifier().read(0));
+    	}
     }
     
     public void translateFallingObject(PacketContainer packet, Player player) throws FieldAccessException {
@@ -419,6 +449,42 @@ class Calculations {
         //);
         
         // We're done
+    }
+    
+    // For Minecraft 1.7.2
+    private static class ChunkCoordInt {
+    	private static FieldAccessor COORD_X;
+    	private static FieldAccessor COORD_Z;
+    	
+    	public final int x;
+    	public final int z;
+
+    	/**
+    	 * Construct a new chunk coordinate.
+    	 * @param x - the x index of the chunk.
+    	 * @param z - the z index of the chunk.
+    	 */
+    	public ChunkCoordInt(int x, int z) {
+			this.x = x;
+			this.z = z;
+		}
+
+    	/**
+    	 * Retrieve a new chunk coord from an object handle.
+    	 * @param handle - the handle.
+    	 * @return The chunk coordinate.
+    	 */
+		public static ChunkCoordInt fromHandle(Object handle) {
+    		if (COORD_X == null || COORD_Z == null) {
+    			COORD_X = Accessors.getFieldAccessor(handle.getClass(), "x", true);
+    			COORD_Z = Accessors.getFieldAccessor(handle.getClass(), "z", true);
+    		}
+    		
+    		return new ChunkCoordInt(
+				 (Integer) COORD_X.get(handle),
+				 (Integer) COORD_Z.get(handle)
+    		);
+    	}
     }
     
 	public static double getMilliseconds(Stopwatch watch) {
