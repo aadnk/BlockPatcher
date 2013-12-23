@@ -34,14 +34,18 @@ class PacketListeners {
 		
 		// Modify chunk packets asynchronously
 		manager.getAsynchronousManager().registerAsyncHandler(
-			new PacketAdapter(plugin, ListenerPriority.HIGHEST, MAP_CHUNK, MAP_CHUNK_BULK) {
+			new PacketAdapter(plugin, ListenerPriority.HIGHEST, 
+			  MAP_CHUNK, MAP_CHUNK_BULK, UPDATE_SIGN, TILE_ENTITY_DATA) {
 				@Override
 				public void onPacketSending(PacketEvent event) {
 					try {
 						if (event.getPacketType() == MAP_CHUNK) {
 							calculations.translateMapChunk(event.getPacket(), event.getPlayer());
-						} else {
+						} else if (event.getPacketType() == MAP_CHUNK_BULK) {
 							calculations.translateMapChunkBulk(event.getPacket(), event.getPlayer());
+						} else {
+							// Update sign or tile entity data - these are only enqueued so they 
+							// are sent in the correct order
 						}
 
 					} catch (FieldAccessException e) {

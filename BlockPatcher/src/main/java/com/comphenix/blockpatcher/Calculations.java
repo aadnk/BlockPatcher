@@ -37,8 +37,6 @@ import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.reflect.accessors.Accessors;
 import com.comphenix.protocol.reflect.accessors.FieldAccessor;
 import com.comphenix.protocol.utility.MinecraftReflection;
-import com.comphenix.protocol.wrappers.ChunkPosition;
-import com.comphenix.protocol.wrappers.WrappedChunkCoordinate;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.google.common.base.Stopwatch;
 
@@ -80,7 +78,6 @@ class Calculations {
 	}
 	
 	public boolean isImportantChunkBulk(PacketContainer packet, Player player) throws FieldAccessException {
-		
     	StructureModifier<int[]> intArrays = packet.getSpecificModifier(int[].class);
         int[] x = intArrays.read(0); 
         int[] z = intArrays.read(1); 
@@ -95,7 +92,6 @@ class Calculations {
 	}
 	
 	public boolean isImportantChunk(PacketContainer packet, Player player) throws FieldAccessException {
-		
 		StructureModifier<Integer> ints = packet.getSpecificModifier(int.class);
 		int x = ints.read(0); 	
         int y = ints.read(1);
@@ -108,7 +104,6 @@ class Calculations {
 	}
 	
 	public void translateMapChunkBulk(PacketContainer packet, Player player) throws FieldAccessException {
-		
     	StructureModifier<int[]> intArrays = packet.getSpecificModifier(int[].class);
     	StructureModifier<byte[]> byteArrays = packet.getSpecificModifier(byte[].class);
     	
