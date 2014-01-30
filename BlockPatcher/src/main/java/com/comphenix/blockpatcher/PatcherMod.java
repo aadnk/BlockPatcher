@@ -28,6 +28,8 @@ public class PatcherMod extends JavaPlugin {
 	private static ConversionCache cache;
 	private static PatcherAPI api;
 	
+	private BlockMismatchFixer fixer;
+	
 	/**
 	 * Retrieve an instance of the API.
 	 * @return Patcher API.
@@ -56,5 +58,11 @@ public class PatcherMod extends JavaPlugin {
 		calculations = new Calculations(cache, scheduler);
 		listeners = new PacketListeners(this, scheduler);
 		listeners.registerEvents(calculations);
+		fixer = new BlockMismatchFixer(this, cache);
+	}
+	
+	@Override
+	public void onDisable() {
+		fixer.close();
 	}
 }
