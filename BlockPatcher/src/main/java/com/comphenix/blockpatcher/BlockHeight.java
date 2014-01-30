@@ -8,12 +8,13 @@ import com.google.common.collect.ImmutableMap;
 
 class BlockHeight {
 	private final ImmutableMap<Material, Double> lookup;
+	private static final int NONSTANDARD_BLOCKS = 21;
 	
 	public BlockHeight(Logger logger) {
 		ImmutableMap.Builder<Material, Double> builder = ImmutableMap.builder();
 		
 		// Ugly, but it allows us to stay backwards compatible
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < NONSTANDARD_BLOCKS; i++) {
 			try {
 				addBlock(builder, i);
 			} catch (Throwable e) {
