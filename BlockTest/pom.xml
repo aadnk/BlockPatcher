@@ -79,7 +79,7 @@
   	<dependency>
   		<groupId>com.comphenix.blockpatcher</groupId>
   		<artifactId>BlockPatcher</artifactId>
-  		<version>1.3.0-SNAPSHOT</version>
+  		<version>1.4.1</version>
   	</dependency>
   </dependencies>
 </project>
